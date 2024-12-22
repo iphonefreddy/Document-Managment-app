@@ -26,6 +26,12 @@ class User(db.Model):
     password = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(50), nullable=False)  # "Admin" or "Staff"
 
+# Policy model
+class Policy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+
 # Route: Home (redirects to login)
 @app.route("/")
 def home():
@@ -83,12 +89,10 @@ def logout():
 # Route: Dashboard with Role-Specific Views
 @app.route("/dashboard")
 def dashboard():
-    # Check if user is logged in
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("login"))
 
-    # Get the logged-in user
     user = User.query.get(user_id)
 
     # Admin Dashboard
@@ -102,7 +106,7 @@ def dashboard():
         <body>
             <h1>Welcome, {{ user.name }} (Admin)</h1>
             <ul>
-                <li><a href="#">Manage Policies</a></li>
+                <li><a href="{{ url_for('manage_policies') }}">Manage Policies</a></li>
                 <li><a href="#">View Acknowledgment Status</a></li>
                 <li><a href="#">View Notifications</a></li>
             </ul>
@@ -130,9 +134,43 @@ def dashboard():
         </html>
         """, user=user)
 
-    # If role is unknown
     else:
         return "Unauthorized Access", 403
+
+# Route: Manage Policies (Admin only)
+@app.route("/manage_policies")
+def manage_policies():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    user = User.query.get(user_id)
+    if user.role != "Admin":
+        return "Unauthorized Access", 403
+
+    policies = Policy.query.all()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Manage Policies</title>
+    </head>
+    <body>
+        <h1>Manage Policies</h1>
+        <ul>
+            {% for policy in policies %}
+                <li>
+                    <strong>{{ policy.title }}</strong>
+                    <a href="#">Edit</a>
+                    <a href="#">Delete</a>
+                </li>
+            {% endfor %}
+        </ul>
+        <a href="#">Add New Policy</a><br>
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </body>
+    </html>
+    """, policies=policies)
 
 # Initialize the database and add a sample admin user
 with app.app_context():
