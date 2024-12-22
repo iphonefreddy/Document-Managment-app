@@ -18,7 +18,7 @@ def require_login():
     if "user_id" not in session and request.endpoint not in ("login", "static"):
         return redirect(url_for("login"))
 
-# User model with roles
+# User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -31,6 +31,13 @@ class Policy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
+
+# Acknowledgment model
+class Acknowledgment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    policy_id = db.Column(db.Integer, db.ForeignKey('policy.id'), nullable=False)
+    read = db.Column(db.Boolean, default=False)
 
 # Route: Home (redirects to login)
 @app.route("/")
@@ -54,9 +61,7 @@ def login():
     return render_template_string("""
     <!DOCTYPE html>
     <html>
-    <head>
-        <title>Login</title>
-    </head>
+    <head><title>Login</title></head>
     <body>
         <h1>Login</h1>
         <form method="POST">
@@ -86,7 +91,7 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
 
-# Route: Dashboard with Role-Specific Views
+# Route: Dashboard
 @app.route("/dashboard")
 def dashboard():
     user_id = session.get("user_id")
@@ -95,45 +100,36 @@ def dashboard():
 
     user = User.query.get(user_id)
 
-    # Admin Dashboard
     if user.role == "Admin":
         return render_template_string("""
         <!DOCTYPE html>
         <html>
-        <head>
-            <title>Admin Dashboard</title>
-        </head>
+        <head><title>Admin Dashboard</title></head>
         <body>
             <h1>Welcome, {{ user.name }} (Admin)</h1>
             <ul>
                 <li><a href="{{ url_for('manage_policies') }}">Manage Policies</a></li>
-                <li><a href="#">View Acknowledgment Status</a></li>
-                <li><a href="#">View Notifications</a></li>
+                <li><a href="{{ url_for('view_acknowledgments') }}">View Acknowledgments</a></li>
+                <li><a href="#">Compliance Check</a></li>
             </ul>
             <a href="{{ url_for('logout') }}">Logout</a>
         </body>
         </html>
         """, user=user)
-
-    # Staff Dashboard
     elif user.role == "Staff":
         return render_template_string("""
         <!DOCTYPE html>
         <html>
-        <head>
-            <title>Staff Dashboard</title>
-        </head>
+        <head><title>Staff Dashboard</title></head>
         <body>
             <h1>Welcome, {{ user.name }} (Staff)</h1>
             <ul>
-                <li><a href="#">View Policies</a></li>
-                <li><a href="#">Acknowledge Policies</a></li>
+                <li><a href="{{ url_for('view_policies') }}">View Policies</a></li>
             </ul>
             <a href="{{ url_for('logout') }}">Logout</a>
         </body>
         </html>
         """, user=user)
-
     else:
         return "Unauthorized Access", 403
 
@@ -152,9 +148,7 @@ def manage_policies():
     return render_template_string("""
     <!DOCTYPE html>
     <html>
-    <head>
-        <title>Manage Policies</title>
-    </head>
+    <head><title>Manage Policies</title></head>
     <body>
         <h1>Manage Policies</h1>
         <ul>
