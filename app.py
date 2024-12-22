@@ -18,6 +18,12 @@ class Policy(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+class Acknowledgment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    policy_id = db.Column(db.Integer, db.ForeignKey('policy.id'), nullable=False)
+    read = db.Column(db.Boolean, default=False)
+
 # Initialize the database
 with app.app_context():
     db.create_all()
