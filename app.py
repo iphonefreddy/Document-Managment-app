@@ -1,18 +1,29 @@
 from flask import Flask, render_template_string, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 import os
 
 app = Flask(__name__)
 
-# Mock database (in reality, this would be a proper database)
-policies = [
-    {"id": 1, "title": "Policy A", "content": "This is the content of Policy A.", "read": False},
-    {"id": 2, "title": "Policy B", "content": "This is the content of Policy B.", "read": False},
-    {"id": 3, "title": "Policy C", "content": "This is the content of Policy C.", "read": True},  # Example of an already read policy
-]
+# Configure SQLite database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///policies.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Define database models
+class Policy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    read = db.Column(db.Boolean, default=False)
+
+# Initialize the database
+with app.app_context():
+    db.create_all()
 
 # User dashboard
 @app.route("/dashboard")
 def dashboard():
+    policies = Policy.query.all()
     return render_template_string("""
     <!DOCTYPE html>
     <html>
@@ -40,9 +51,7 @@ def dashboard():
 # View policy content
 @app.route("/policy/<int:policy_id>")
 def view_policy(policy_id):
-    policy = next((p for p in policies if p["id"] == policy_id), None)
-    if not policy:
-        return "Policy not found", 404
+    policy = Policy.query.get_or_404(policy_id)
     return render_template_string("""
     <!DOCTYPE html>
     <html>
@@ -67,10 +76,21 @@ def view_policy(policy_id):
 # Mark policy as read
 @app.route("/mark_as_read/<int:policy_id>", methods=["POST"])
 def mark_as_read(policy_id):
-    policy = next((p for p in policies if p["id"] == policy_id), None)
-    if policy:
-        policy["read"] = True
+    policy = Policy.query.get_or_404(policy_id)
+    policy.read = True
+    db.session.commit()
     return redirect(url_for("dashboard"))
+
+# Add sample policies (only if the database is empty)
+with app.app_context():
+    if not Policy.query.first():
+        sample_policies = [
+            Policy(title="Policy A", content="This is the content of Policy A."),
+            Policy(title="Policy B", content="This is the content of Policy B."),
+            Policy(title="Policy C", content="This is the content of Policy C.", read=True),
+        ]
+        db.session.add_all(sample_policies)
+        db.session.commit()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
