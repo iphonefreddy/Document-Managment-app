@@ -133,9 +133,9 @@ def dashboard():
     else:
         return "Unauthorized Access", 403
 
-# Route: View Acknowledgments (Admin only)
-@app.route("/view_acknowledgments")
-def view_acknowledgments():
+# Route: Manage Policies (Admin only)
+@app.route("/manage_policies")
+def manage_policies():
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("login"))
@@ -144,31 +144,27 @@ def view_acknowledgments():
     if user.role != "Admin":
         return "Unauthorized Access", 403
 
-    acknowledgments = db.session.query(Acknowledgment, User, Policy).join(User).join(Policy).all()
+    policies = Policy.query.all()
     return render_template_string("""
     <!DOCTYPE html>
     <html>
-    <head><title>Acknowledgments</title></head>
+    <head><title>Manage Policies</title></head>
     <body>
-        <h1>Policy Acknowledgments</h1>
-        <table border="1">
-            <tr>
-                <th>User</th>
-                <th>Policy</th>
-                <th>Status</th>
-            </tr>
-            {% for ack, user, policy in acknowledgments %}
-            <tr>
-                <td>{{ user.name }}</td>
-                <td>{{ policy.title }}</td>
-                <td>{{ "Read" if ack.read else "Pending" }}</td>
-            </tr>
+        <h1>Manage Policies</h1>
+        <ul>
+            {% for policy in policies %}
+                <li>
+                    <strong>{{ policy.title }}</strong>
+                    <a href="#">Edit</a>
+                    <a href="#">Delete</a>
+                </li>
             {% endfor %}
-        </table>
+        </ul>
+        <a href="#">Add New Policy</a><br>
         <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
     </body>
     </html>
-    """, acknowledgments=acknowledgments)
+    """, policies=policies)
 
 # Initialize the database and add a sample admin user
 with app.app_context():
