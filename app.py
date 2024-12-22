@@ -33,6 +33,34 @@ with app.app_context():
         ]
         db.session.add_all(sample_policies)
         db.session.commit()
+with app.app_context():
+    # Add sample users if the database is empty
+    if not User.query.first():
+        sample_users = [
+            User(name="Alice"),
+            User(name="Bob"),
+            User(name="Charlie"),
+        ]
+        db.session.add_all(sample_users)
+        db.session.commit()
+
+        # Add sample acknowledgments
+        user1 = User.query.filter_by(name="Alice").first()
+        user2 = User.query.filter_by(name="Bob").first()
+        user3 = User.query.filter_by(name="Charlie").first()
+        policy1 = Policy.query.filter_by(title="Policy A").first()
+        policy2 = Policy.query.filter_by(title="Policy B").first()
+        policy3 = Policy.query.filter_by(title="Policy C").first()
+
+        sample_acknowledgments = [
+            Acknowledgment(user_id=user1.id, policy_id=policy1.id, read=True),
+            Acknowledgment(user_id=user1.id, policy_id=policy2.id, read=False),
+            Acknowledgment(user_id=user2.id, policy_id=policy1.id, read=False),
+            Acknowledgment(user_id=user3.id, policy_id=policy3.id, read=True),
+        ]
+        db.session.add_all(sample_acknowledgments)
+        db.session.commit()
+
 
 # Initialize the database
 with app.app_context():
