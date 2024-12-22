@@ -15,17 +15,23 @@ class Policy(db.Model):
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     read = db.Column(db.Boolean, default=False)
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+
 class Acknowledgment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     policy_id = db.Column(db.Integer, db.ForeignKey('policy.id'), nullable=False)
     read = db.Column(db.Boolean, default=False)
 
+# Initialize the database and add sample data
 with app.app_context():
-    if not Policy.query.first():  # Add sample policies if none exist
+    db.create_all()
+    
+    # Add sample policies
+    if not Policy.query.first():
         sample_policies = [
             Policy(title="Policy A", content="This is the content of Policy A."),
             Policy(title="Policy B", content="This is the content of Policy B."),
@@ -33,8 +39,8 @@ with app.app_context():
         ]
         db.session.add_all(sample_policies)
         db.session.commit()
-with app.app_context():
-    # Add sample users if the database is empty
+
+    # Add sample users
     if not User.query.first():
         sample_users = [
             User(name="Alice"),
@@ -45,28 +51,20 @@ with app.app_context():
         db.session.commit()
 
         # Add sample acknowledgments
-        user1 = User.query.filter_by(name="Alice").first()
-        user2 = User.query.filter_by(name="Bob").first()
-        user3 = User.query.filter_by(name="Charlie").first()
-        policy1 = Policy.query.filter_by(title="Policy A").first()
-        policy2 = Policy.query.filter_by(title="Policy B").first()
-        policy3 = Policy.query.filter_by(title="Policy C").first()
-
-        sample_acknowledgments = [
-            Acknowledgment(user_id=user1.id, policy_id=policy1.id, read=True),
-            Acknowledgment(user_id=user1.id, policy_id=policy2.id, read=False),
-            Acknowledgment(user_id=user2.id, policy_id=policy1.id, read=False),
-            Acknowledgment(user_id=user3.id, policy_id=policy3.id, read=True),
+        acknowledgments = [
+            Acknowledgment(user_id=1, policy_id=1, read=True),
+            Acknowledgment(user_id=1, policy_id=2, read=False),
+            Acknowledgment(user_id=2, policy_id=1, read=False),
+            Acknowledgment(user_id=3, policy_id=3, read=True),
         ]
-        db.session.add_all(sample_acknowledgments)
+        db.session.add_all(acknowledgments)
         db.session.commit()
 
+# Routes
+@app.route("/")
+def home():
+    return redirect(url_for("dashboard"))
 
-# Initialize the database
-with app.app_context():
-    db.create_all()
-
-# User dashboard
 @app.route("/dashboard")
 def dashboard():
     policies = Policy.query.all()
@@ -94,7 +92,6 @@ def dashboard():
     </html>
     """, policies=policies)
 
-# View policy content
 @app.route("/policy/<int:policy_id>")
 def view_policy(policy_id):
     policy = Policy.query.get_or_404(policy_id)
@@ -119,26 +116,46 @@ def view_policy(policy_id):
     </html>
     """, policy=policy)
 
-# Mark policy as read
 @app.route("/mark_as_read/<int:policy_id>", methods=["POST"])
 def mark_as_read(policy_id):
     policy = Policy.query.get_or_404(policy_id)
     policy.read = True
     db.session.commit()
     return redirect(url_for("dashboard"))
-@app.route("/")
-def home():
-    return redirect(url_for("dashboard"))
-# Add sample policies (only if the database is empty)
-with app.app_context():
-    if not Policy.query.first():
-        sample_policies = [
-            Policy(title="Policy A", content="This is the content of Policy A."),
-            Policy(title="Policy B", content="This is the content of Policy B."),
-            Policy(title="Policy C", content="This is the content of Policy C.", read=True),
-        ]
-        db.session.add_all(sample_policies)
-        db.session.commit()
+
+@app.route("/admin")
+def admin_dashboard():
+    acknowledgments = db.session.query(
+        User.name, Policy.title, Acknowledgment.read
+    ).join(Acknowledgment, User.id == Acknowledgment.user_id).join(
+        Policy, Policy.id == Acknowledgment.policy_id
+    ).all()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin Dashboard</title>
+    </head>
+    <body>
+        <h1>Admin Dashboard</h1>
+        <table border="1">
+            <tr>
+                <th>User</th>
+                <th>Policy</th>
+                <th>Status</th>
+            </tr>
+            {% for user, policy, status in acknowledgments %}
+            <tr>
+                <td>{{ user }}</td>
+                <td>{{ policy }}</td>
+                <td>{{ "Read" if status else "Pending" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </body>
+    </html>
+    """, acknowledgments=acknowledgments)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
