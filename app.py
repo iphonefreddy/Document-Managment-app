@@ -24,6 +24,16 @@ class Acknowledgment(db.Model):
     policy_id = db.Column(db.Integer, db.ForeignKey('policy.id'), nullable=False)
     read = db.Column(db.Boolean, default=False)
 
+with app.app_context():
+    if not Policy.query.first():  # Add sample policies if none exist
+        sample_policies = [
+            Policy(title="Policy A", content="This is the content of Policy A."),
+            Policy(title="Policy B", content="This is the content of Policy B."),
+            Policy(title="Policy C", content="This is the content of Policy C.", read=True),
+        ]
+        db.session.add_all(sample_policies)
+        db.session.commit()
+
 # Initialize the database
 with app.app_context():
     db.create_all()
