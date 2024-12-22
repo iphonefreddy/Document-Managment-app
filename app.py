@@ -32,6 +32,17 @@ class Acknowledgment(db.Model):
 # Initialize the database
 with app.app_context():
     db.create_all()
+with app.app_context():
+    # Check if any policies exist
+    if not Policy.query.first():
+        # Add sample policies
+        sample_policies = [
+            Policy(title="Policy A", content="This is the content of Policy A."),
+            Policy(title="Policy B", content="This is the content of Policy B."),
+            Policy(title="Policy C", content="This is the content of Policy C.")
+        ]
+        db.session.add_all(sample_policies)
+        db.session.commit()
 
 # Route: Home (redirects to user dashboard)
 @app.route("/")
