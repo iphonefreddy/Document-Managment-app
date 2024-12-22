@@ -110,7 +110,6 @@ def dashboard():
             <ul>
                 <li><a href="{{ url_for('manage_policies') }}">Manage Policies</a></li>
                 <li><a href="{{ url_for('view_acknowledgments') }}">View Acknowledgments</a></li>
-                <li><a href="#">Compliance Check</a></li>
             </ul>
             <a href="{{ url_for('logout') }}">Logout</a>
         </body>
@@ -124,7 +123,7 @@ def dashboard():
         <body>
             <h1>Welcome, {{ user.name }} (Staff)</h1>
             <ul>
-                <li><a href="#">View Policies</a></li>
+                <li><a href="{{ url_for('view_policies') }}">View Policies</a></li>
             </ul>
             <a href="{{ url_for('logout') }}">Logout</a>
         </body>
@@ -166,17 +165,59 @@ def manage_policies():
     </html>
     """, policies=policies)
 
-# Initialize the database and add a sample admin user
-with app.app_context():
-    db.create_all()
-    if not User.query.filter_by(email="admin@example.com").first():
-        hashed_password = generate_password_hash("admin123", method="sha256")
-        admin = User(name="Admin User", email="admin@example.com", password=hashed_password, role="Admin")
-        staff = User(name="Staff User", email="staff@example.com", password=generate_password_hash("staff123", method="sha256"), role="Staff")
-        db.session.add_all([admin, staff])
-        db.session.commit()
+# Route: View Policies (Staff only)
+@app.route("/view_policies")
+def view_policies():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
 
-# Run the app
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    user = User.query.get(user_id)
+    if user.role != "Staff":
+        return "Unauthorized Access", 403
+
+    policies = Policy.query.all()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head><title>View Policies</title></head>
+    <body>
+        <h1>View Policies</h1>
+        <ul>
+            {% for policy in policies %}
+                <li>
+                    <strong>{{ policy.title }}</strong>
+                </li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </body>
+    </html>
+    """, policies=policies)
+
+# Route: View Acknowledgments (Admin only)
+@app.route("/view_acknowledgments")
+def view_acknowledgments():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    user = User.query.get(user_id)
+    if user.role != "Admin":
+        return "Unauthorized Access", 403
+
+    acknowledgments = db.session.query(Acknowledgment, User, Policy).join(User).join(Policy).all()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Acknowledgments</title></head>
+    <body>
+        <h1>Policy Acknowledgments</h1>
+        <table border="1">
+            <tr>
+                <th>User</th>
+                <th>Policy</th>
+                <th>Status</th>
+            </tr>
+            {% for ack, user, policy in acknowledgments %}
+            <tr>
