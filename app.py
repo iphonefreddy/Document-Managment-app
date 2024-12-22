@@ -80,7 +80,9 @@ def mark_as_read(policy_id):
     policy.read = True
     db.session.commit()
     return redirect(url_for("dashboard"))
-
+@app.route("/")
+def home():
+    return redirect(url_for("dashboard"))
 # Add sample policies (only if the database is empty)
 with app.app_context():
     if not Policy.query.first():
