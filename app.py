@@ -40,8 +40,6 @@ class Acknowledgment(db.Model):
 
 # Initialize the database
 with app.app_context():
-    db.create_all()
-    with app.app_context():
     if not User.query.filter_by(email="admin@example.com").first():
         hashed_password = generate_password_hash("admin123", method="sha256")
         admin = User(name="Admin User", email="admin@example.com", password=hashed_password, role="Admin")
