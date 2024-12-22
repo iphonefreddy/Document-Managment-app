@@ -1,59 +1,77 @@
-
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, request, redirect, url_for
+import os
 
 app = Flask(__name__)
 
-config_data = {
-    "theme": {
-        "primaryColor": "#0054A4",
-        "secondaryColor": "#009D5C",
-        "fontFamily": "Roboto"
-    },
-    "layout": {
-        "sections": [
-            {"name": "Upload Documents", "icon": "upload_icon"},
-            {"name": "Search Policies", "icon": "search_icon"},
-            {"name": "View Approvals", "icon": "approval_icon"}
-        ]
-    }
-}
+# Mock database (in reality, this would be a proper database)
+policies = [
+    {"id": 1, "title": "Policy A", "content": "This is the content of Policy A.", "read": False},
+    {"id": 2, "title": "Policy B", "content": "This is the content of Policy B.", "read": False},
+    {"id": 3, "title": "Policy C", "content": "This is the content of Policy C.", "read": True},  # Example of an already read policy
+]
 
-html_template = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Management App</title>
-    <style>
-        body { font-family: {{ theme.fontFamily }}; background-color: {{ theme.primaryColor }}; color: white; text-align: center; }
-        h1 { background-color: {{ theme.secondaryColor }}; padding: 20px; margin: 0; }
-        .section { margin: 20px; padding: 10px; border: 1px solid white; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <h1>Dynamic Theming App</h1>
-    <div id="dashboard">
-        {% for section in layout.sections %}
-        <div class="section">
-            <h2>{{ section.name }}</h2>
-        </div>
-        {% endfor %}
-    </div>
-</body>
-</html>
-'''
+# User dashboard
+@app.route("/dashboard")
+def dashboard():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Policy Dashboard</title>
+    </head>
+    <body>
+        <h1>Policy Acknowledgment</h1>
+        <ul>
+            {% for policy in policies %}
+                <li>
+                    <a href="{{ url_for('view_policy', policy_id=policy.id) }}">{{ policy.title }}</a>
+                    {% if policy.read %}
+                        - <strong>Read</strong>
+                    {% else %}
+                        - <em>Pending</em>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </body>
+    </html>
+    """, policies=policies)
 
-@app.route('/')
-def home():
-    return render_template_string(html_template, theme=config_data['theme'], layout=config_data['layout'])
+# View policy content
+@app.route("/policy/<int:policy_id>")
+def view_policy(policy_id):
+    policy = next((p for p in policies if p["id"] == policy_id), None)
+    if not policy:
+        return "Policy not found", 404
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{{ policy.title }}</title>
+    </head>
+    <body>
+        <h1>{{ policy.title }}</h1>
+        <p>{{ policy.content }}</p>
+        {% if not policy.read %}
+        <form action="{{ url_for('mark_as_read', policy_id=policy.id) }}" method="post">
+            <button type="submit">Mark as Read</button>
+        </form>
+        {% else %}
+        <p><strong>Policy already marked as read.</strong></p>
+        {% endif %}
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </body>
+    </html>
+    """, policy=policy)
 
-@app.route('/config')
-def get_config():
-    return jsonify(config_data)
+# Mark policy as read
+@app.route("/mark_as_read/<int:policy_id>", methods=["POST"])
+def mark_as_read(policy_id):
+    policy = next((p for p in policies if p["id"] == policy_id), None)
+    if policy:
+        policy["read"] = True
+    return redirect(url_for("dashboard"))
 
 if __name__ == "__main__":
-    import os
-port = int(os.environ.get("PORT", 5000))
-app.run(host="0.0.0.0", port=port, debug=True)
-    
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
