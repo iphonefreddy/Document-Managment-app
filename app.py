@@ -75,19 +75,69 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
 
+# Route: Dashboard with Role-Specific Views
+@app.route("/dashboard")
+def dashboard():
+    # Check if user is logged in
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    # Get the logged-in user
+    user = User.query.get(user_id)
+
+    # Admin Dashboard
+    if user.role == "Admin":
+        return render_template_string("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Admin Dashboard</title>
+        </head>
+        <body>
+            <h1>Welcome, {{ user.name }} (Admin)</h1>
+            <ul>
+                <li><a href="#">Manage Policies</a></li>
+                <li><a href="#">View Acknowledgment Status</a></li>
+                <li><a href="#">View Notifications</a></li>
+            </ul>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </body>
+        </html>
+        """, user=user)
+
+    # Staff Dashboard
+    elif user.role == "Staff":
+        return render_template_string("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Staff Dashboard</title>
+        </head>
+        <body>
+            <h1>Welcome, {{ user.name }} (Staff)</h1>
+            <ul>
+                <li><a href="#">View Policies</a></li>
+                <li><a href="#">Acknowledge Policies</a></li>
+            </ul>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </body>
+        </html>
+        """, user=user)
+
+    # If role is unknown
+    else:
+        return "Unauthorized Access", 403
+
 # Initialize the database and add a sample admin user
 with app.app_context():
     db.create_all()
     if not User.query.filter_by(email="admin@example.com").first():
         hashed_password = generate_password_hash("admin123", method="sha256")
         admin = User(name="Admin User", email="admin@example.com", password=hashed_password, role="Admin")
-        db.session.add(admin)
+        staff = User(name="Staff User", email="staff@example.com", password=generate_password_hash("staff123", method="sha256"), role="Staff")
+        db.session.add_all([admin, staff])
         db.session.commit()
-
-# Placeholder route for dashboard (update this later)
-@app.route("/dashboard")
-def dashboard():
-    return "<h1>Welcome to the Dashboard</h1>"
 
 # Run the app
 if __name__ == "__main__":
