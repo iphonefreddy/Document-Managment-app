@@ -26,6 +26,11 @@ class User(db.Model):
     password = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(50), nullable=False)  # "Admin" or "Staff"
 
+# Route: Home (redirects to login)
+@app.route("/")
+def home():
+    return redirect(url_for("login"))
+
 # Route: Login
 @app.route("/login", methods=["GET", "POST"])
 def login():
