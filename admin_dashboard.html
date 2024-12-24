@@ -1,0 +1,16 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>Admin Dashboard</title></head>
+<body>
+    <h2>Admin Dashboard</h2>
+    <a href="/logout">Logout</a>
+    <h3>Policies</h3>
+    <ul>
+        {% for policy in policies %}
+        <li>{{ policy.title }} - <a href="/policy/{{ policy.id }}/edit">Edit</a></li>
+        {% endfor %}
+    </ul>
+    <a href="/policy/create">Create New Policy</a>
+</body>
+</html>

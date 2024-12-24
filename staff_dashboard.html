@@ -1,0 +1,16 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>Staff Dashboard</title></head>
+<body>
+    <h2>Staff Dashboard</h2>
+    <a href="/logout">Logout</a>
+    <h3>Policies to Acknowledge</h3>
+    <ul>
+        {% for policy in policies %}
+        <li>{{ policy.title }} - <form method="POST" action="/policy/{{ policy.id }}/acknowledge">
+            <button type="submit">Acknowledge</button></form></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
